@@ -37,6 +37,34 @@ def _validate_horizon(horizon: Any) -> dict[str, Any]:
     return {"valid": True, "warnings": warnings}
 
 
+def _check_ambiguous_inputs(
+    X_handle: str | None,
+    y_handle: str | None,
+    X_dataset: str | None,
+    y_dataset: str | None,
+) -> dict[str, Any] | None:
+    """Reject when both a handle and a dataset are given for the same slot."""
+    if y_handle and y_dataset:
+        return {
+            "success": False,
+            "error": (
+                f"Ambiguous y input: both y_handle ({y_handle!r}) and "
+                f"y_dataset ({y_dataset!r}) were provided. "
+                "Provide exactly one source per slot."
+            ),
+        }
+    if X_handle and X_dataset:
+        return {
+            "success": False,
+            "error": (
+                f"Ambiguous X input: both X_handle ({X_handle!r}) and "
+                f"X_dataset ({X_dataset!r}) were provided. "
+                "Provide exactly one source per slot."
+            ),
+        }
+    return None
+
+
 def fit_tool(
     estimator_handle: str,
     X_dataset: str | None = None,
@@ -50,6 +78,9 @@ def fit_tool(
     Fit an estimator on data.
     """
     executor = get_executor()
+
+    if err := _check_ambiguous_inputs(X_handle, y_handle, X_dataset, y_dataset):
+        return err
 
     # We must resolve y and X from the provided handles/datasets
     X = None
@@ -155,6 +186,9 @@ def predict_tool(
 
     executor = get_executor()
 
+    if err := _check_ambiguous_inputs(X_handle, y_handle, X_dataset, y_dataset):
+        return err
+
     if run_async:
         import asyncio
 
@@ -257,6 +291,9 @@ def update_tool(
     y_handle: str | None = None,
 ) -> dict[str, Any]:
     executor = get_executor()
+
+    if err := _check_ambiguous_inputs(X_handle, y_handle, X_dataset, y_dataset):
+        return err
 
     X = None
     y = None
